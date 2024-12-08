@@ -28,14 +28,17 @@ public class Worker : BackgroundService
             {
                 _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
             }
-
-                        // Spectre.Console prompt
+            
+            // Spectre.Console prompt
             var userSelection = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
                 .Title("What action would you like to perform?")
                 .PageSize(10)
                 .AddChoices(new[] {
-                    "Run a bulk operation", "Exit Application\n"
+                    "Run a bulk operation", 
+                    "Write a person item",
+                    "Query: SELECT * FROM c",
+                    "Exit Application\n"
                 }));
 
             switch(userSelection)
@@ -43,8 +46,11 @@ public class Worker : BackgroundService
                 case "Run a bulk operation":
                     await CosmosService.BulkWrite(_cosmosClient, _configuration["cosmosDatabase"], _configuration["cosmosContainer"], stoppingToken);
                     break;
-                case "2":
-
+                case "Write a person item":
+                    await CosmosService.WriteItem(_cosmosClient, _configuration["cosmosDatabase"], _configuration["cosmosContainer"], stoppingToken);
+                    break;
+                case "Query: SELECT * FROM c":
+                    await CosmosService.QueryItems(_cosmosClient, _configuration["cosmosDatabase"], _configuration["cosmosContainer"], stoppingToken);
                     break;
                 case "Exit Application\n":
                     _logger.LogInformation("Shutting down...");
