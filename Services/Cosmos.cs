@@ -10,12 +10,22 @@ namespace ultimate_cosmosdb_demo.Services
 
         public static CosmosClient GetCosmosClient(string cosmosEndpoint, string? entraTenantId)
         {
-            InteractiveBrowserCredentialOptions credOpt = new()
+            
+            DefaultAzureCredentialOptions credOptions = new()
             {
-                TenantId = entraTenantId
+                ExcludeVisualStudioCodeCredential = true,
+                ExcludeVisualStudioCredential = true,
+                ExcludeEnvironmentCredential = true,
             };
 
-            InteractiveBrowserCredential cred = new(credOpt);
+            DefaultAzureCredential cred = new(credOptions);
+
+            // InteractiveBrowserCredentialOptions credOpt = new()
+            // {
+            //     TenantId = entraTenantId
+            // };
+
+            // InteractiveBrowserCredential cred = new(credOpt);
             
             CosmosSerializationOptions serializationOptions = new()
             {
