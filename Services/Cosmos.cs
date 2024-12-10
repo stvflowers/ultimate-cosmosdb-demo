@@ -3,6 +3,7 @@ using Azure.Identity;
 using ultimate_cosmosdb_demo.Models;
 
 namespace ultimate_cosmosdb_demo.Services;
+
 public class CosmosService
 {
     public static CosmosClient GetCosmosClient(string cosmosEndpoint, string? entraTenantId)
@@ -34,12 +35,16 @@ public class CosmosService
             SerializerOptions = serializationOptions,
             AllowBulkExecution = true
         };
+        try
+        {
+            CosmosClient cosmosClient = new(cosmosEndpoint, cred, clientOptions);
+            return cosmosClient;
 
-        CosmosClient cosmosClient = new(cosmosEndpoint, cred, clientOptions);
-
-        return cosmosClient;
+        } catch {
+            throw new Exception("An error occurred while creating the CosmosClient.");
+        }        
     }
-    public static async Task BulkWrite(CosmosClient _client, string? database, string? container, CancellationToken stoppingToken)
+    public static async Task BulkWrite(CosmosClient _client, string? database, string? container, ILogger<Worker> _logger, CancellationToken stoppingToken)
     {
         Database _database = _client.GetDatabase(database);
         Container _container = _database.GetContainer(container);
@@ -56,16 +61,16 @@ public class CosmosService
                     {
                         if (ItemResponse.IsCompletedSuccessfully)
                         {
-                            Console.WriteLine($"Created item {ItemResponse.Result.Resource.Id} in database {_database.Id} container {_container.Id}");
+                            _logger.LogInformation($"Created item {ItemResponse.Result.Resource.Id} in database {_database.Id} container {_container.Id}");
                         }
                         else
                         {
-                            Console.WriteLine($"Failed to create item {ItemResponse.Result.Resource.Id} in database {_database.Id} container {_container.Id}");
+                            _logger.LogError($"Failed to create item {ItemResponse.Result.Resource.Id} in database {_database.Id} container {_container.Id}");
                         }
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"Exception occurred: {ex.Message}");
+                        _logger.LogError($"Exception occurred: {ex.Message}");
                     }
                 }));
         }
@@ -73,7 +78,7 @@ public class CosmosService
         await Task.WhenAll(tasks);
 
     }    
-    public static async Task WriteItem(CosmosClient _client, string? database, string? container, CancellationToken stoppingToken)
+    public static async Task WriteItem(CosmosClient _client, string? database, string? container, ILogger<Worker> _logger, CancellationToken stoppingToken)
     {
         Database _database = _client.GetDatabase(database);
         Container _container = _database.GetContainer(container);
@@ -87,55 +92,61 @@ public class CosmosService
                 {
                     if (ItemResponse.IsCompletedSuccessfully)
                     {
-                        Console.WriteLine($"Created item {ItemResponse.Result.Resource.Id} in database {_database.Id} container {_container.Id}");
-                        Console.WriteLine($"Person: {person.FirstName} {person.LastName}");
-                        Console.WriteLine("HTTP status code: " + ItemResponse.Result.StatusCode);
-                        Console.WriteLine("Operation request charge: " + ItemResponse.Result.RequestCharge);
+                        _logger.LogInformation($"Created item {ItemResponse.Result.Resource.Id} in database {_database.Id} container {_container.Id}");
+                        _logger.LogInformation($"Person: {person.FirstName} {person.LastName}");
+                        _logger.LogInformation("HTTP status code: " + ItemResponse.Result.StatusCode);
+                        _logger.LogInformation("Operation request charge: " + ItemResponse.Result.RequestCharge);
                     }
                     else
                     {
-                        Console.WriteLine($"Failed to create item {ItemResponse.Result.Resource.Id} in database {_database.Id} container {_container.Id}");
+                        _logger.LogError($"Failed to create item {ItemResponse.Result.Resource.Id} in database {_database.Id} container {_container.Id}");
                     }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Exception occurred: {ex.Message}");
+                    _logger.LogError($"Exception occurred: {ex.Message}");
                 }
             });            
     }
-    public static async Task PatchItemNewFirstName(CosmosClient _client, string? database, string? container, string id, string email, string newFirstName, CancellationToken stoppingToken)
+    public static async Task PatchItemNewFirstName(CosmosClient _client, string? database, string? container, string id, string email, string newFirstName, ILogger<Worker> _logger, CancellationToken stoppingToken)
     {
         Database _database = _client.GetDatabase(database);
         Container _container = _database.GetContainer(container);
 
-        ItemResponse<CosmosPerson> response = await _container.ReadItemAsync<CosmosPerson>(id, new PartitionKey(email));
-        CosmosPerson personToPatch = response.Resource;
-
-        await _container.PatchItemAsync<CosmosPerson>(
-            id: personToPatch.Id,
-            partitionKey: new PartitionKey(personToPatch.Email),
-            patchOperations: new[] { PatchOperation.Replace("/firstName", newFirstName) })
-            .ContinueWith(ItemResponse =>
-            {
-                try
-                {
-                    if (ItemResponse.IsCompletedSuccessfully)
+        try
+        {
+            ItemResponse<CosmosPerson> response = await _container.ReadItemAsync<CosmosPerson>(id, new PartitionKey(email));
+            CosmosPerson personToPatch = response.Resource;
+            await _container.PatchItemAsync<CosmosPerson>(
+                id: personToPatch.Id,
+                partitionKey: new PartitionKey(personToPatch.Email),
+                patchOperations: new[] { PatchOperation.Replace("/firstName", newFirstName) },
+                cancellationToken: stoppingToken)
+                    .ContinueWith(ItemResponse =>
                     {
-                        Console.WriteLine($"Upserted item {ItemResponse.Result.Resource.Id} in database {_database.Id} container {_container.Id}");
-                        Console.WriteLine("Operation request charge: " + ItemResponse.Result.RequestCharge);
-                    }
-                    else
-                    {
-                        Console.WriteLine($"Failed to upsert item {ItemResponse.Result.Resource.Id} in database {_database.Id} container {_container.Id}");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Exception occurred: {ex.Message}");
-                }
-            });
-    }
-    public static async Task QueryItems(CosmosClient _client, string? database, string? container, QueryDefinition query, CancellationToken stoppingToken)
+                        try
+                        {
+                            if (ItemResponse.IsCompletedSuccessfully)
+                            {
+                                _logger.LogInformation($"Upserted item {ItemResponse.Result.Resource.Id} in database {_database.Id} container {_container.Id}");
+                                _logger.LogInformation("Operation request charge: " + ItemResponse.Result.RequestCharge);
+                            }
+                            else
+                            {
+                                _logger.LogError($"Failed to upsert item {ItemResponse.Result.Resource.Id} in database {_database.Id} container {_container.Id}");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError($"Exception occurred: {ex.Message}");
+                        }
+                    }, stoppingToken);
+    
+        } catch (Exception ex) {
+            _logger.LogError($"Exception occurred: {ex.Message}");
+        }
+}
+    public static async Task QueryItems(CosmosClient _client, string? database, string? container, QueryDefinition query, ILogger<Worker> _logger, CancellationToken stoppingToken)
     {
         Database _database = _client.GetDatabase(database);
         Container _container = _database.GetContainer(container);
@@ -145,25 +156,31 @@ public class CosmosService
         while (resultSet.HasMoreResults)
         {
             FeedResponse<CosmosPerson> response = await resultSet.ReadNextAsync();
-            Console.WriteLine("Items returned this iteration: " + response.Count);
-            Console.WriteLine($"Request charge: {response.RequestCharge}");
+            _logger.LogInformation("Items returned this iteration: " + response.Count);
+            _logger.LogInformation($"Request charge: {response.RequestCharge}");
             // foreach (CosmosPerson person in response)
             // {
             //     Console.WriteLine($"Person: {person.FirstName} {person.LastName}");
             // }
         }
     }
-    public static async Task PointReadItem(CosmosClient _client, string? database, string? container, string id, string partitionKey, CancellationToken stoppingToken)
+    public static async Task PointReadItem(CosmosClient _client, string? database, string? container, string id, string partitionKey, ILogger<Worker> _logger, CancellationToken stoppingToken)
     {
         Database _database = _client.GetDatabase(database);
         Container _container = _database.GetContainer(container);
-
-        ItemResponse<CosmosPerson> response = await _container.ReadItemAsync<CosmosPerson>(id, new PartitionKey(partitionKey));
-        CosmosPerson person = response.Resource;
-
-        Console.WriteLine($"Person: {person.FirstName} {person.LastName}");
+        try
+        {
+            ItemResponse<CosmosPerson> response = await _container.ReadItemAsync<CosmosPerson>(id, new PartitionKey(partitionKey));
+            CosmosPerson person = response.Resource;
+            Console.WriteLine($"Person: {person.FirstName} {person.LastName}");
+        } catch (Exception ex) {
+            _logger.LogError($"Exception occurred: {ex.Message}");
+            Console.WriteLine($"Exception occurred: {ex.Message}");
+            return;
+        }
+    
     }
-    public static async Task DemoHotPartition(CosmosClient _client, string? database, string? container, string partitionKeyPath, CancellationToken stoppingToken)
+    public static async Task DemoHotPartition(CosmosClient _client, string? database, string? container, string partitionKeyPath, ILogger<Worker> _logger, CancellationToken stoppingToken)
     {
         // For this example, we will recreate a hot partition scenario
         // The container should have at least 30k RUs
@@ -191,16 +208,16 @@ public class CosmosService
                     {
                         if (ItemResponse.IsCompletedSuccessfully)
                         {
-                            Console.WriteLine($"Created item {ItemResponse.Result.Resource.Id} in database {_database.Id} container {_container.Id}");
+                            _logger.LogInformation($"Created item {ItemResponse.Result.Resource.Id} in database {_database.Id} container {_container.Id}");
                         }
                         else
                         {
-                            Console.WriteLine($"Failed to create item {ItemResponse.Result.Resource.Id} in database {_database.Id} container {_container.Id}");
+                            _logger.LogError($"Failed to create item {ItemResponse.Result.Resource.Id} in database {_database.Id} container {_container.Id}");
                         }
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"Exception occurred: {ex.Message}");
+                        _logger.LogError($"Exception occurred: {ex.Message}");
                     }
                 }));
         }
@@ -220,22 +237,22 @@ public class CosmosService
                     {
                         if (ItemResponse.IsCompletedSuccessfully)
                         {
-                            Console.WriteLine($"Created item {ItemResponse.Result.Resource.Id} in database {_database.Id} container {_container.Id}");
+                            _logger.LogInformation($"Created item {ItemResponse.Result.Resource.Id} in database {_database.Id} container {_container.Id}");
                         }
                         else
                         {
-                            Console.WriteLine($"Failed to create item {ItemResponse.Result.Resource.Id} in database {_database.Id} container {_container.Id}");
+                            _logger.LogError($"Failed to create item {ItemResponse.Result.Resource.Id} in database {_database.Id} container {_container.Id}");
                         }
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"Exception occurred: {ex.Message}");
+                        _logger.LogError($"Exception occurred: {ex.Message}");
                     }
                 }));
         }
 
     }
-    public static async Task OptimisticConcurrencyWrite(CosmosClient _client, string? database, string? container, string id, string pk, string newEmail, CancellationToken stoppingToken)
+    public static async Task OptimisticConcurrencyWrite(CosmosClient _client, string? database, string? container, string id, string pk, string newEmail, ILogger<Worker> _logger,  CancellationToken stoppingToken)
     {
         Database _database = _client.GetDatabase(database);
         Container _container = _database.GetContainer(container);
@@ -251,9 +268,17 @@ public class CosmosService
             IfMatchEtag = response.ETag
         };
 
-        await _container.ReplaceItemAsync<CosmosPerson>(personToPatch, personToPatch.Id, new PartitionKey(personToPatch.Email), options);
+        try {
+            await _container.ReplaceItemAsync<CosmosPerson>(personToPatch, personToPatch.Id, new PartitionKey(personToPatch.Email), options);
+
+        } catch (Exception ex)
+        {
+            _logger.LogError($"Exception occurred: {ex.Message}");
+            return;
+        }
+
     }
-    public static async Task SetItemTTL(CosmosClient _client, string? database, string? container, string id, string pk, int ttl, CancellationToken stoppingToken)
+    public static async Task SetItemTTL(CosmosClient _client, string? database, string? container, string id, string pk, int ttl, ILogger<Worker> _logger, CancellationToken stoppingToken)
     {
         Database _database = _client.GetDatabase(database);
         Container _container = _database.GetContainer(container);
@@ -264,11 +289,11 @@ public class CosmosService
 
         try{
             ItemResponse<CosmosPersonTtl> response = await _container.ReplaceItemAsync<CosmosPersonTtl>(p, p.Id, new PartitionKey(p.Email));
-            Console.WriteLine($"Item to be deleted: {response.Resource.Id} in {ttl} seconds.");
-            Console.WriteLine("Operation request charge: " + response.RequestCharge);
+            _logger.LogInformation($"Item to be deleted: {response.Resource.Id} in {ttl} seconds.");
+            _logger.LogInformation("Operation request charge: " + response.RequestCharge);
         }
         catch (Exception ex) {
-            Console.WriteLine($"Exception occurred: {ex.Message}");
+            _logger.LogError($"Exception occurred: {ex.Message}");
         }
 
 

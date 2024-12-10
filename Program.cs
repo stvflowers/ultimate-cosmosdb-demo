@@ -30,6 +30,8 @@ public class Program
 
         builder.Services.AddHostedService<Worker>();
 
+        builder.Services.AddLogging();
+
         var host = builder.Build();
         host.Run();
     }

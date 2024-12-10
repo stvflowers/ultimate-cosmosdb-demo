@@ -1,5 +1,5 @@
 # Ultimate Cosmosdb Demo
-The one demo to rule them all. The goal of this repo is to keep a single demo up to date the evolves with new features.
+The one demo to rule them all. The goal of this repo is to keep a single demo up to date that evolves with new features.
 
 # Code Tour
 Install the Code Tour extension in VS Code.
