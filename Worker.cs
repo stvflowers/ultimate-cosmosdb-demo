@@ -39,8 +39,11 @@ public class Worker : BackgroundService
                     "Run a bulk operation", 
                     "Write a person item",
                     "Query: SELECT * FROM c",
+                    "Demo: Point read",
+                    "Demo: Patch Item",
                     "Demo: Hot partition",
                     "Demo: Set Item TTL",
+                    "Demo: Optimistic Concurrency",
                     "Exit Application\n"
                 }));
 
@@ -71,7 +74,20 @@ public class Worker : BackgroundService
                         .WithParameter("@email", email);
                     await CosmosService.QueryItems(_cosmosClient, database, container, pkQuery, stoppingToken);
                     break;
+                case "Demo: Point read":
+                    string pointReadId = "ea4df80c-3278-4144-8274-d4f753605da6";
+                    string pointReadEmail = "";
+                    await CosmosService.PointReadItem(_cosmosClient, database, container, pointReadId, pointReadEmail, stoppingToken);
+                    break;
+                case "Demo: Patch Item":
+                    string patchId = "";
+                    string patchEmail = "";
+                    string newFirstName = "";
+                    await CosmosService.PatchItemNewFirstName(_cosmosClient, database, container, patchId, patchEmail, newFirstName, stoppingToken);
+                    break;
                 case "Demo: Hot partition":
+                    // Set a new container instead of the one used for the rest of the demo.
+                    // Perferably with at least 3 physical partitions.
                     string hotContainer = "HotPartition";
                     string partitionKey = "/partitionKey";
                     await CosmosService.DemoHotPartition(_cosmosClient, database, hotContainer, partitionKey, stoppingToken);
@@ -81,6 +97,12 @@ public class Worker : BackgroundService
                     string pk = "Wilma62@yahoo.com";
                     int ttl = 60;
                     await CosmosService.SetItemTTL(_cosmosClient, database, container, id, pk, ttl, stoppingToken);
+                    break;
+                case "Demo: Optimistic Concurrency":
+                    string occId = "ea4df80c-3278-4144-8274-d4f753605da6";
+                    string occPk = "Wilma62@yahoo.com";
+                    string newEmail = "Wilma@yahoo.com";
+                    await CosmosService.OptimisticConcurrencyWrite(_cosmosClient, database, container, occId, occPk, newEmail, stoppingToken);
                     break;
                 case "Exit Application\n":
                     _logger.LogInformation("Shutting down...");

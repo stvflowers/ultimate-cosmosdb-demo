@@ -103,14 +103,17 @@ public class CosmosService
                 }
             });            
     }
-    public static async Task PatchItemNewFirstName(CosmosClient _client, string? database, string? container, CosmosPerson person, string newFirstName, CancellationToken stoppingToken)
+    public static async Task PatchItemNewFirstName(CosmosClient _client, string? database, string? container, string id, string email, string newFirstName, CancellationToken stoppingToken)
     {
         Database _database = _client.GetDatabase(database);
         Container _container = _database.GetContainer(container);
 
+        ItemResponse<CosmosPerson> response = await _container.ReadItemAsync<CosmosPerson>(id, new PartitionKey(email));
+        CosmosPerson personToPatch = response.Resource;
+
         await _container.PatchItemAsync<CosmosPerson>(
-            id: person.Id,
-            partitionKey: new PartitionKey(person.Email),
+            id: personToPatch.Id,
+            partitionKey: new PartitionKey(personToPatch.Email),
             patchOperations: new[] { PatchOperation.Replace("/firstName", newFirstName) })
             .ContinueWith(ItemResponse =>
             {
