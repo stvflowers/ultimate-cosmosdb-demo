@@ -4,7 +4,7 @@ The one demo to rule them all. The goal of this repo is to keep a single demo up
 # Code Tour
 Install the Code Tour extension in VS Code.
 
-Use the command pallete to launch "CodeTour: Start Tour"
+Use the command palette to launch "CodeTour: Start Tour"
 
 `introduction.tour` will review the basics.
 
