@@ -37,3 +37,14 @@ Launch.json needs edited to support Spectre.Console while debugging.
         }
     ]
 ```
+
+# Code Tour
+Install the Code Tour extension in VS Code.
+
+Use the command pallete to launch "CodeTour: Start Tour"
+
+`introduction.tour` will review the basics.
+
+`models.tour` will review the data models and generation of example data.
+
+`cosmos.tour` will review the methods in the Cosmos service.
