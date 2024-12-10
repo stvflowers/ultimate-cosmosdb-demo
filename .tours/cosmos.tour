@@ -1,0 +1,187 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "cosmos",
+  "steps": [
+    {
+      "file": "Services/Cosmos.cs",
+      "description": "Those CosmosService class contains all of the logic for making calls to Cosmos DB.",
+      "line": 6
+    },
+    {
+      "file": "Services/Cosmos.cs",
+      "description": "As mentioned in the introduction, we use this class to create a client singleton for dependency injection.",
+      "line": 8
+    },
+    {
+      "file": "Services/Cosmos.cs",
+      "description": "WriteItem method will write a single CosmosPerson to a container.",
+      "line": 76
+    },
+    {
+      "file": "Services/Cosmos.cs",
+      "description": "First, we must generate a person using Bogus.",
+      "line": 81
+    },
+    {
+      "file": "Services/Cosmos.cs",
+      "description": "Then we call the CreateItemAsync method which is a member of the container class we've created.",
+      "line": 83
+    },
+    {
+      "file": "Services/Cosmos.cs",
+      "description": "The ItemResponse includes the returned item as well as metrics for the call.",
+      "line": 84
+    },
+    {
+      "file": "Services/Cosmos.cs",
+      "description": "The status code is an HTTP status code that is returned.",
+      "line": 92
+    },
+    {
+      "file": "Services/Cosmos.cs",
+      "description": "And the request charge value is the cost in Cosmos DB consumption units for the call.",
+      "line": 93
+    },
+    {
+      "file": "Services/Cosmos.cs",
+      "description": "We can also write a list of items in bulk. In the introduction, we covered the Cosmos DB client options and there we eneabled Bulk Execution.",
+      "line": 42
+    },
+    {
+      "file": "Services/Cosmos.cs",
+      "description": "This time, we generate 1,000 CosmosPerson objects and add them to a read-only collection.",
+      "line": 47
+    },
+    {
+      "file": "Services/Cosmos.cs",
+      "description": "We need a list of tasks for bulk execution. Each person document will be added to the list.",
+      "line": 48
+    },
+    {
+      "file": "Services/Cosmos.cs",
+      "description": "For every item in the collection, we add it to the list of tasks.",
+      "line": 50
+    },
+    {
+      "file": "Services/Cosmos.cs",
+      "description": "And we wait until all of the tasks are complete.",
+      "line": 73
+    },
+    {
+      "file": "Services/Cosmos.cs",
+      "description": "This method helps us query items in a container.",
+      "line": 135
+    },
+    {
+      "file": "Worker.cs",
+      "description": "The definition for the query is created in the Worker. As you can see, we are just performing a SELECT * in this example.",
+      "line": 58
+    },
+    {
+      "file": "Services/Cosmos.cs",
+      "description": "The query is passed to the method and a GetItemQueryIterator method is called. We store the results in a FeedIterator object.",
+      "line": 140
+    },
+    {
+      "file": "Services/Cosmos.cs",
+      "description": "The FeedIterator object has a property \"HasMoreResults\" which indicates there are more items to return from Cosmos DB. We iterate until there are no more results.",
+      "line": 142
+    },
+    {
+      "file": "Services/Cosmos.cs",
+      "description": "As we iterate, we fetch the next batch of results using ReadNextAsync.",
+      "line": 144
+    },
+    {
+      "file": "Services/Cosmos.cs",
+      "description": "This method demonstrates a point read operation. This is the most efficient read operation in Cosmos DB. It requires the ID and the Partition Key for an item which represents the index of the item.",
+      "line": 153
+    },
+    {
+      "file": "Services/Cosmos.cs",
+      "description": "We use ReadItemAsync and pas the id and partition key.",
+      "line": 158
+    },
+    {
+      "file": "Services/Cosmos.cs",
+      "description": "This method demonstrates patching an item.",
+      "line": 106
+    },
+    {
+      "file": "Services/Cosmos.cs",
+      "description": "We use PatchItemAsync to perform the operation.",
+      "line": 111
+    },
+    {
+      "file": "Services/Cosmos.cs",
+      "description": "We have to create a patch operations object and define the targeted field to update.",
+      "line": 114
+    },
+    {
+      "file": "Services/Cosmos.cs",
+      "description": "When updating an item, we can check its _etag property to implement optimistic concurrency control. If the item has been updated since we last read it, the operation will fail. We can then reread the object and re-attempt the update.",
+      "line": 235
+    },
+    {
+      "file": "Services/Cosmos.cs",
+      "description": "Here we read the document and store it in a variable.",
+      "line": 240
+    },
+    {
+      "file": "Services/Cosmos.cs",
+      "description": "We must configure options to check for the _etag match.",
+      "line": 246
+    },
+    {
+      "file": "Services/Cosmos.cs",
+      "description": "And pass those options to our ReplaceItemAsync method.",
+      "line": 251
+    },
+    {
+      "file": "Services/Cosmos.cs",
+      "description": "We can set the TTL of a specific item for deletion using this method.",
+      "line": 253
+    },
+    {
+      "file": "Services/Cosmos.cs",
+      "description": "You can see here we are using one of our abstracted classes that includes the TTL field.",
+      "line": 258
+    },
+    {
+      "file": "Services/Cosmos.cs",
+      "description": "And we set the TTL based on the parameter.",
+      "line": 260
+    },
+    {
+      "file": "Worker.cs",
+      "description": "In this case, we are setting it to 60 seconds.",
+      "line": 82
+    },
+    {
+      "file": "Services/Cosmos.cs",
+      "description": "And we simply update the document which now includes a TTL property.",
+      "line": 263
+    },
+    {
+      "file": "Services/Cosmos.cs",
+      "description": "This class demonstrates hot partitions.",
+      "line": 163
+    },
+    {
+      "file": "Services/Cosmos.cs",
+      "description": "First we seed the container with an even number of documents where the partition key is set to either 1, 2, or 3.",
+      "line": 174
+    },
+    {
+      "file": "Services/Cosmos.cs",
+      "description": "Using a random value from 1-3 for our partition key.",
+      "line": 180
+    },
+    {
+      "file": "Services/Cosmos.cs",
+      "description": "And here we generate another 1,000 documents where the partition key is statically set to 3. Whichever physical partition contains the logical partition \"3\" will become hot.",
+      "line": 211
+    }
+  ],
+  "ref": "dev"
+}

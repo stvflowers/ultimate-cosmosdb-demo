@@ -9,7 +9,7 @@ public class Program
     {
         var builder = Host.CreateApplicationBuilder(args);
 
-                builder.Configuration.AddUserSecrets<Program>();
+        builder.Configuration.AddUserSecrets<Program>();
 
         // Register the Cosmos as a Singleton
         builder.Services.AddSingleton((s) => {
