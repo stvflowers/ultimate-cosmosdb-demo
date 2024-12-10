@@ -1,6 +1,17 @@
 # Ultimate Cosmosdb Demo
 The one demo to rule them all. The goal of this repo is to keep a single demo up to date the evolves with new features.
 
+# Code Tour
+Install the Code Tour extension in VS Code.
+
+Use the command pallete to launch "CodeTour: Start Tour"
+
+`introduction.tour` will review the basics.
+
+`models.tour` will review the data models and generation of example data.
+
+`cosmos.tour` will review the methods in the Cosmos service.
+
 # Prereqs
 Add packages from NuGet.
 ```
@@ -37,14 +48,3 @@ Launch.json needs edited to support Spectre.Console while debugging.
         }
     ]
 ```
-
-# Code Tour
-Install the Code Tour extension in VS Code.
-
-Use the command pallete to launch "CodeTour: Start Tour"
-
-`introduction.tour` will review the basics.
-
-`models.tour` will review the data models and generation of example data.
-
-`cosmos.tour` will review the methods in the Cosmos service.
