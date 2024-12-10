@@ -18,6 +18,9 @@ public class CosmosService
 
         DefaultAzureCredential cred = new(credOptions);
 
+        // Use InteractiveBrowser credential if chain of resolution
+        // for Default credential is failing and you don't want to troubleshoot.
+        
         // InteractiveBrowserCredentialOptions credOpt = new()
         // {
         //     TenantId = entraTenantId
@@ -85,7 +88,7 @@ public class CosmosService
 
         CosmosPerson person = BogusService.GeneratePerson();
 
-        await _container.CreateItemAsync<CosmosPerson>(person)
+        await _container.CreateItemAsync<CosmosPerson>(person, cancellationToken: stoppingToken)
             .ContinueWith(ItemResponse =>
             {
                 try
@@ -106,7 +109,7 @@ public class CosmosService
                 {
                     _logger.LogError($"Exception occurred: {ex.Message}");
                 }
-            });            
+            }, stoppingToken);            
     }
     public static async Task PatchItemNewFirstName(CosmosClient _client, string? database, string? container, string id, string email, string newFirstName, ILogger<Worker> _logger, CancellationToken stoppingToken)
     {
@@ -116,31 +119,20 @@ public class CosmosService
         try
         {
             ItemResponse<CosmosPerson> response = await _container.ReadItemAsync<CosmosPerson>(id, new PartitionKey(email));
+            
             CosmosPerson personToPatch = response.Resource;
+            
             await _container.PatchItemAsync<CosmosPerson>(
                 id: personToPatch.Id,
                 partitionKey: new PartitionKey(personToPatch.Email),
                 patchOperations: new[] { PatchOperation.Replace("/firstName", newFirstName) },
                 cancellationToken: stoppingToken)
-                    .ContinueWith(ItemResponse =>
-                    {
-                        try
-                        {
-                            if (ItemResponse.IsCompletedSuccessfully)
-                            {
-                                _logger.LogInformation($"Upserted item {ItemResponse.Result.Resource.Id} in database {_database.Id} container {_container.Id}");
-                                _logger.LogInformation("Operation request charge: " + ItemResponse.Result.RequestCharge);
-                            }
-                            else
-                            {
-                                _logger.LogError($"Failed to upsert item {ItemResponse.Result.Resource.Id} in database {_database.Id} container {_container.Id}");
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError($"Exception occurred: {ex.Message}");
-                        }
-                    }, stoppingToken);
+                .ContinueWith(ItemResponse =>
+                {
+                    _logger.LogInformation($"Upserted item {ItemResponse.Result.Resource.Id} in database {_database.Id} container {_container.Id}");
+                    _logger.LogInformation("Operation request charge: " + ItemResponse.Result.RequestCharge);
+
+                }, stoppingToken);
     
         } catch (Exception ex) {
             _logger.LogError($"Exception occurred: {ex.Message}");
@@ -151,32 +143,35 @@ public class CosmosService
         Database _database = _client.GetDatabase(database);
         Container _container = _database.GetContainer(container);
 
-        FeedIterator<CosmosPerson> resultSet = _container.GetItemQueryIterator<CosmosPerson>(query);
-
-        while (resultSet.HasMoreResults)
+        try {
+            FeedIterator<CosmosPerson> resultSet = _container.GetItemQueryIterator<CosmosPerson>(query);
+            while (resultSet.HasMoreResults)
+            {
+                FeedResponse<CosmosPerson> response = await resultSet.ReadNextAsync();
+                _logger.LogInformation("Items returned this iteration: " + response.Count);
+                _logger.LogInformation($"Request charge: {response.RequestCharge}");
+            }
+        } catch (Exception ex)
         {
-            FeedResponse<CosmosPerson> response = await resultSet.ReadNextAsync();
-            _logger.LogInformation("Items returned this iteration: " + response.Count);
-            _logger.LogInformation($"Request charge: {response.RequestCharge}");
-            // foreach (CosmosPerson person in response)
-            // {
-            //     Console.WriteLine($"Person: {person.FirstName} {person.LastName}");
-            // }
+            _logger.LogError($"Exception occurred: {ex.Message}");
         }
     }
     public static async Task PointReadItem(CosmosClient _client, string? database, string? container, string id, string partitionKey, ILogger<Worker> _logger, CancellationToken stoppingToken)
     {
         Database _database = _client.GetDatabase(database);
         Container _container = _database.GetContainer(container);
+        
         try
         {
             ItemResponse<CosmosPerson> response = await _container.ReadItemAsync<CosmosPerson>(id, new PartitionKey(partitionKey));
+        
             CosmosPerson person = response.Resource;
-            Console.WriteLine($"Person: {person.FirstName} {person.LastName}");
+            
+            _logger.LogInformation($"Person: {person.FirstName} {person.LastName}");
+        
         } catch (Exception ex) {
+            
             _logger.LogError($"Exception occurred: {ex.Message}");
-            Console.WriteLine($"Exception occurred: {ex.Message}");
-            return;
         }
     
     }
