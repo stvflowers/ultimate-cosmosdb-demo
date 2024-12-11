@@ -2,9 +2,10 @@ namespace ultimate_cosmosdb_demo.Models;
 
 public class CosmosPerson
 {
-    public required string Email { get; set; }
-    public required string Phone { get; set; }
-    public string? Id { get; set; }
+    public required string Id { get; set; }
+    public required string PartitionKey { get; set; }
+    public string? Email { get; set; }
+    public string? Phone { get; set; }
     public string? FirstName { get; set; }
     public string? LastName { get; set; }
     public string? UserName { get; set; }
@@ -17,11 +18,7 @@ public class CosmosPerson
 }
 public class CosmosPersonTtl : CosmosPerson
 {
-    public int TTL { get; set; }
-}
-public class CosmosPersonHot : CosmosPerson
-{
-    public string? PartitionKey { get; set; }
+    public int? TTL { get; set; }
 }
 public class Address
 {

@@ -1,4 +1,5 @@
 using Microsoft.Azure.Cosmos;
+using Microsoft.Azure.Cosmos.Linq;
 using Spectre.Console;
 using ultimate_cosmosdb_demo.Services;
 
@@ -39,6 +40,8 @@ public class Worker : BackgroundService
                     "Run a bulk operation", 
                     "Write a person item",
                     "Query: SELECT * FROM c",
+                    "Query: SELECT * FROM c WHERE c.userName = 'username'",
+                    "Query: (cross-partition query) SELECT * FROM c WHERE c.email",
                     "Demo: Point read",
                     "Demo: Patch Item",
                     "Demo: Hot partition",
@@ -49,6 +52,12 @@ public class Worker : BackgroundService
 
             string? database = _configuration["cosmosDatabase"];
             string? container = _configuration["cosmosContainer"];
+            QueryDefinition query;
+            string? id = null;
+            string? partitionKey = null;
+            string? userName = null;
+            string? newFirstName = null;
+            string? newEmail = null;
 
             switch(userSelection)
             {
@@ -59,51 +68,90 @@ public class Worker : BackgroundService
                     await CosmosService.WriteItem(_cosmosClient, database, container, _logger, stoppingToken);
                     break;
                 case "Query: SELECT * FROM c":
-                    QueryDefinition selectStar = new("SELECT * FROM c");
-                    await CosmosService.QueryItems(_cosmosClient, database, container, selectStar, _logger, stoppingToken);
+                    query = new("SELECT * FROM c");
+                    await CosmosService.QueryItems(_cosmosClient, database, container, query, _logger, stoppingToken);
                     break;
                 case "Query: SELECT * FROM c WHERE c.userName = 'username'":
-                    string userName = "";
-                    QueryDefinition noPkQuery = new QueryDefinition("SELECT * FROM c WHERE c.userName = @userName")
-                        .WithParameter("@userName", userName);
-                    await CosmosService.QueryItems(_cosmosClient, database, container, noPkQuery, _logger, stoppingToken);
+                    Console.Write("Provide a username to query: ");
+                    userName = Console.ReadLine();
+                    if(string.IsNullOrEmpty(userName)){
+                        _logger.LogError("Username is null");
+                    } else {
+                        query = new QueryDefinition("SELECT * FROM c WHERE c.userName = @userName")
+                            .WithParameter("@userName", userName);
+                        await CosmosService.QueryItems(_cosmosClient, database, container, query, _logger, stoppingToken);
+                    }
                     break;
-                case "Query: SELECT * FROM c WHERE c.email":
-                    string email = "";
-                    QueryDefinition pkQuery = new QueryDefinition("SELECT * FROM c WHERE c.email = @email")
-                        .WithParameter("@email", email);
-                    await CosmosService.QueryItems(_cosmosClient, database, container, pkQuery, _logger, stoppingToken);
+                case "Query: (cross-partition query) SELECT * FROM c WHERE c.email":
+                    // Non PK Query
+                    Console.WriteLine("Provide an email to query: ");
+                    string? email = Console.ReadLine();
+                    if(string.IsNullOrEmpty(email)){
+                        _logger.LogError("Email is null");
+                    } else {
+                        query = new QueryDefinition("SELECT * FROM c WHERE c.email = @email")
+                            .WithParameter("@email", email);
+                        await CosmosService.QueryItems(_cosmosClient, database, container, query, _logger, stoppingToken);
+                    }
                     break;
                 case "Demo: Point read":
-                    string pointReadId = "ea4df80c-3278-4144-8274-d4f753605da6";
-                    string pointReadEmail = "";
-                    await CosmosService.PointReadItem(_cosmosClient, database, container, pointReadId, pointReadEmail, _logger, stoppingToken);
+                    Console.WriteLine("Provide an ID to point read: ");
+                    id = Console.ReadLine();
+                    Console.WriteLine("Provide a Partition Key to point read: ");
+                    partitionKey = Console.ReadLine();
+                    if(string.IsNullOrEmpty(id) || string.IsNullOrEmpty(partitionKey)){
+                        _logger.LogError("ID or Partition Key is null or empty");
+                    } else {
+                        await CosmosService.PointReadItem(_cosmosClient, database, container, id, partitionKey, _logger, stoppingToken);
+                    }
                     break;
                 case "Demo: Patch Item":
                     // Fill out these variables with values from an example document in your container
-                    string patchId = "";
-                    string patchEmail = "";
-                    string newFirstName = "";
-                    await CosmosService.PatchItemNewFirstName(_cosmosClient, database, container, patchId, patchEmail, newFirstName, _logger, stoppingToken);
+                    Console.WriteLine("Provide an ID to patch: ");
+                    id = Console.ReadLine();
+                    Console.WriteLine("Provide a Partition Key to patch: ");
+                    partitionKey = Console.ReadLine();
+                    Console.WriteLine("Provide a new first name: ");
+                    newFirstName = Console.ReadLine();
+                    await CosmosService.PatchItemNewFirstName(_cosmosClient, database, container, id, partitionKey, newFirstName, _logger, stoppingToken);
                     break;
                 case "Demo: Hot partition":
                     // Set a new container instead of the one used for the rest of the demo.
                     // Perferably with at least 3 physical partitions.
-                    string hotContainer = "HotPartition";
-                    string partitionKey = "/partitionKey";
-                    await CosmosService.DemoHotPartition(_cosmosClient, database, hotContainer, partitionKey, _logger, stoppingToken);
+                    Console.WriteLine("Provide a Partition Key to demo hot partition: ex. /partitionKey");
+                    partitionKey = Console.ReadLine();
+                    if(string.IsNullOrEmpty(partitionKey)){
+                        _logger.LogError("Partition Key is null or empty");
+                    } else {
+                        await CosmosService.DemoHotPartition(_cosmosClient, database, container, partitionKey, _logger, stoppingToken);
+                    }
                     break;
                 case "Demo: Set Item TTL":
-                    string id = "ea4df80c-3278-4144-8274-d4f753605da6";
-                    string pk = "Wilma62@yahoo.com";
-                    int ttl = 60;
-                    await CosmosService.SetItemTTL(_cosmosClient, database, container, id, pk, ttl, _logger, stoppingToken);
+                    Console.WriteLine("Provide an ID to set TTL: ");
+                    id = Console.ReadLine();
+                    Console.WriteLine("Provide a Partition Key to set TTL: ");
+                    partitionKey = Console.ReadLine();
+                    Console.WriteLine("Provide a TTL in seconds: ");
+                    string? seconds = Console.ReadLine();
+                    int? ttl = null;
+                    if (!string.IsNullOrEmpty(seconds))
+                    {
+                        ttl = int.Parse(seconds);
+                    } else {ttl = 60;}
+                    await CosmosService.SetItemTTL(_cosmosClient, database, container, id, partitionKey, ttl, _logger, stoppingToken);
                     break;
                 case "Demo: Optimistic Concurrency":
-                    string occId = "ea4df80c-3278-4144-8274-d4f753605da6";
-                    string occPk = "Wilma62@yahoo.com";
-                    string newEmail = "Wilma@yahoo.com";
-                    await CosmosService.OptimisticConcurrencyWrite(_cosmosClient, database, container, occId, occPk, newEmail, _logger, stoppingToken);
+                    Console.WriteLine("Provide an ID to update: ");
+                    id = Console.ReadLine();
+                    Console.WriteLine("Provide a Partition Key to update: ");
+                    partitionKey = Console.ReadLine();
+                    Console.WriteLine("Provide a new email: ");
+                    newEmail = Console.ReadLine();
+                    if(string.IsNullOrEmpty(id) || string.IsNullOrEmpty(partitionKey) || string.IsNullOrEmpty(newEmail)){
+                        _logger.LogError("ID, Partition Key, or Email is null or empty");
+                    } else {
+                        await CosmosService.OptimisticConcurrencyWrite(_cosmosClient, database, container, id, partitionKey, newEmail, _logger, stoppingToken);
+                    }
                     break;
                 case "Exit Application\n":
                     _logger.LogInformation("Shutting down...");

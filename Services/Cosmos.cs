@@ -33,11 +33,27 @@ public class CosmosService
             PropertyNamingPolicy = CosmosPropertyNamingPolicy.CamelCase
         };
 
+
         CosmosClientOptions clientOptions = new()
         {
             SerializerOptions = serializationOptions,
             AllowBulkExecution = true
         };
+
+
+        // Advanced client options
+        //
+        // CosmosClientOptions clientOptionsAdvanced = new()
+        // {
+        //     SerializerOptions = serializationOptions,
+        //     AllowBulkExecution = true,
+        //     ConnectionMode = ConnectionMode.Gateway,
+        //     ConsistencyLevel = ConsistencyLevel.ConsistentPrefix,
+        //     ApplicationRegion = Regions.EastUS2,
+        //     ApplicationPreferredRegions = ["East US 2", "West US 2", "Central US"]
+        // };
+
+
         try
         {
             CosmosClient cosmosClient = new(cosmosEndpoint, cred, clientOptions);
@@ -111,16 +127,16 @@ public class CosmosService
                 }
             }, stoppingToken);            
     }
-    public static async Task PatchItemNewFirstName(CosmosClient _client, string? database, string? container, string id, string email, string newFirstName, ILogger<Worker> _logger, CancellationToken stoppingToken)
+    public static async Task PatchItemNewFirstName(CosmosClient _client, string? database, string? container, string? id, string? partitionKey, string? newFirstName, ILogger<Worker> _logger, CancellationToken stoppingToken)
     {
         Database _database = _client.GetDatabase(database);
-        Container _container = _database.GetContainer(container);
+        Container _container = _database.GetContainer(container);      
 
         try
         {
-            ItemResponse<CosmosPerson> response = await _container.ReadItemAsync<CosmosPerson>(id, new PartitionKey(email));
+            ItemResponse<CosmosPerson> response = await _container.ReadItemAsync<CosmosPerson>(id, new PartitionKey(partitionKey));
             
-            CosmosPerson personToPatch = response.Resource;
+            CosmosPerson personToPatch = response;
             
             await _container.PatchItemAsync<CosmosPerson>(
                 id: personToPatch.Id,
@@ -150,13 +166,14 @@ public class CosmosService
                 FeedResponse<CosmosPerson> response = await resultSet.ReadNextAsync();
                 _logger.LogInformation("Items returned this iteration: " + response.Count);
                 _logger.LogInformation($"Request charge: {response.RequestCharge}");
+
             }
         } catch (Exception ex)
         {
             _logger.LogError($"Exception occurred: {ex.Message}");
         }
     }
-    public static async Task PointReadItem(CosmosClient _client, string? database, string? container, string id, string partitionKey, ILogger<Worker> _logger, CancellationToken stoppingToken)
+    public static async Task PointReadItem(CosmosClient _client, string? database, string? container, string? id, string? partitionKey, ILogger<Worker> _logger, CancellationToken stoppingToken)
     {
         Database _database = _client.GetDatabase(database);
         Container _container = _database.GetContainer(container);
@@ -175,7 +192,7 @@ public class CosmosService
         }
     
     }
-    public static async Task DemoHotPartition(CosmosClient _client, string? database, string? container, string partitionKeyPath, ILogger<Worker> _logger, CancellationToken stoppingToken)
+    public static async Task DemoHotPartition(CosmosClient _client, string? database, string? container, string? partitionKeyPath, ILogger<Worker> _logger, CancellationToken stoppingToken)
     {
         // For this example, we will recreate a hot partition scenario
         // The container should have at least 30k RUs
@@ -183,49 +200,18 @@ public class CosmosService
         // Then write additional items with a skewed partition key value
         
         Database _database = _client.GetDatabase(database);
-        ContainerProperties containerProperties = new(container, partitionKeyPath);
-        Container _container = await _database.CreateContainerIfNotExistsAsync(containerProperties);
+        Container _container = _database.GetContainer(container);
 
-        IReadOnlyCollection<CosmosPersonHot> persons =  BogusService.BulkGenerateHotPersons(1000);
+        IReadOnlyCollection<CosmosPerson> personsHot =  BogusService.BulkGeneratePersons(10000);
         List<Task> tasks = [];
 
-        foreach (CosmosPersonHot person in persons)
-        {
-            Random random = new Random();
-            int p = random.Next(1, 4);
-
-            person.PartitionKey = p.ToString();
-
-            tasks.Add(_container.CreateItemAsync<CosmosPersonHot>(person)
-                .ContinueWith(ItemResponse =>
-                {
-                    try
-                    {
-                        if (ItemResponse.IsCompletedSuccessfully)
-                        {
-                            _logger.LogInformation($"Created item {ItemResponse.Result.Resource.Id} in database {_database.Id} container {_container.Id}");
-                        }
-                        else
-                        {
-                            _logger.LogError($"Failed to create item {ItemResponse.Result.Resource.Id} in database {_database.Id} container {_container.Id}");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError($"Exception occurred: {ex.Message}");
-                    }
-                }));
-        }
-
-        IReadOnlyCollection<CosmosPersonHot> personsHot =  BogusService.BulkGenerateHotPersons(1000);
-        List<Task> tasksHot = [];
-
-        foreach (CosmosPersonHot person in personsHot)
+        foreach (CosmosPerson person in personsHot)
         {
 
+            // Overwrite the random PK with a static integer to force a hot partition.
             person.PartitionKey = 3.ToString();
 
-            tasks.Add(_container.CreateItemAsync<CosmosPersonHot>(person)
+            tasks.Add(_container.CreateItemAsync<CosmosPerson>(person)
                 .ContinueWith(ItemResponse =>
                 {
                     try
@@ -247,7 +233,7 @@ public class CosmosService
         }
 
     }
-    public static async Task OptimisticConcurrencyWrite(CosmosClient _client, string? database, string? container, string id, string pk, string newEmail, ILogger<Worker> _logger,  CancellationToken stoppingToken)
+    public static async Task OptimisticConcurrencyWrite(CosmosClient _client, string? database, string? container, string? id, string? pk, string? newEmail, ILogger<Worker> _logger,  CancellationToken stoppingToken)
     {
         Database _database = _client.GetDatabase(database);
         Container _container = _database.GetContainer(container);
@@ -273,7 +259,7 @@ public class CosmosService
         }
 
     }
-    public static async Task SetItemTTL(CosmosClient _client, string? database, string? container, string id, string pk, int ttl, ILogger<Worker> _logger, CancellationToken stoppingToken)
+    public static async Task SetItemTTL(CosmosClient _client, string? database, string? container, string? id, string? pk, int? ttl, ILogger<Worker> _logger, CancellationToken stoppingToken)
     {
         Database _database = _client.GetDatabase(database);
         Container _container = _database.GetContainer(container);

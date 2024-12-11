@@ -10,17 +10,12 @@
     {
       "file": "Models/Person.cs",
       "description": "When written to Cosmos DB, Address will be a sub-object in our JSON item. As will company.",
-      "line": 26
+      "line": 23
     },
     {
       "file": "Models/Person.cs",
       "description": "We extend the base class to include the TTL field to demonstrate implementing TTL for items.",
-      "line": 18
-    },
-    {
-      "file": "Models/Person.cs",
-      "description": "We also extend the base class and add a partitionKey field to demonstrate creating hot partitions.",
-      "line": 22
+      "line": 19
     },
     {
       "file": "Services/Bogus.cs",
