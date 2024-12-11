@@ -20,37 +20,37 @@
     {
       "file": "Services/Cosmos.cs",
       "description": "We use DefaultAzureCredential to authenticate to Cosmos DB using Azure RBAC.",
-      "line": 11
+      "line": 12
     },
     {
       "file": "Services/Cosmos.cs",
       "description": "Serialization options help map our models to Cosmos DB items. C# uses Pascal case and in our Cosmos DB items we use camel case.",
-      "line": 27
+      "line": 31
     },
     {
       "file": "Services/Cosmos.cs",
       "description": "Here we create an options object to include our serialization settings and set any additional settings. In this case, we are also enabling bulk execution.",
-      "line": 32
+      "line": 37
     },
     {
       "file": "Worker.cs",
       "description": "Our Worker class executes our business logic and is controlled by the host builder. Here we are injecting several classes, mainly our Cosmos client class.",
-      "line": 15
+      "line": 16
     },
     {
       "file": "Worker.cs",
       "description": "This is the Spectre.Console menu. As new methods are added, we include them in this list for menu selection in the console.",
-      "line": 33
+      "line": 34
     },
     {
       "file": "Worker.cs",
       "description": "This switch statement takes our menu selection and executes the case based on the selection.",
-      "line": 50
+      "line": 62
     },
     {
       "file": "Worker.cs",
       "description": "Our Cosmos Service has a WriteItem method. Of course it requires a Cosmos client, a database object and a container object. The stopping token is provided by the host builder to gracefully exit the application.",
-      "line": 55
+      "line": 68
     }
   ],
   "ref": "dev"
