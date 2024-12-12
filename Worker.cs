@@ -37,16 +37,16 @@ public class Worker : BackgroundService
                 .PageSize(20)
                 .MoreChoicesText("[grey](Move up and down to reveal more choices)[/]")
                 .AddChoices(new[] {
-                    "Run a bulk operation", 
                     "Write a person item",
+                    "Run a bulk operation", 
+                    "Patch Item",
+                    "Item Update with Concurrency Check",
+                    "Set Item TTL",
+                    "Point read",
                     "Query: SELECT * FROM c",
                     "Query: SELECT * FROM c WHERE c.userName = 'username'",
                     "Query: (cross-partition query) SELECT * FROM c WHERE c.email",
-                    "Demo: Point read",
-                    "Demo: Patch Item",
                     "Demo: Hot partition",
-                    "Demo: Set Item TTL",
-                    "Demo: Optimistic Concurrency",
                     "Exit Application\n"
                 }));
 
@@ -94,7 +94,7 @@ public class Worker : BackgroundService
                         await CosmosService.QueryItems(_cosmosClient, database, container, query, _logger, stoppingToken);
                     }
                     break;
-                case "Demo: Point read":
+                case "Point read":
                     Console.WriteLine("Provide an ID to point read: ");
                     id = Console.ReadLine();
                     Console.WriteLine("Provide a Partition Key to point read: ");
@@ -105,7 +105,7 @@ public class Worker : BackgroundService
                         await CosmosService.PointReadItem(_cosmosClient, database, container, id, partitionKey, _logger, stoppingToken);
                     }
                     break;
-                case "Demo: Patch Item":
+                case "Patch Item":
                     // Fill out these variables with values from an example document in your container
                     Console.WriteLine("Provide an ID to patch: ");
                     id = Console.ReadLine();
@@ -113,7 +113,7 @@ public class Worker : BackgroundService
                     partitionKey = Console.ReadLine();
                     Console.WriteLine("Provide a new first name: ");
                     newFirstName = Console.ReadLine();
-                    await CosmosService.PatchItemNewFirstName(_cosmosClient, database, container, id, partitionKey, newFirstName, _logger, stoppingToken);
+                    await CosmosService.PatchItem(_cosmosClient, database, container, id, partitionKey, newFirstName, _logger, stoppingToken);
                     break;
                 case "Demo: Hot partition":
                     // Set a new container instead of the one used for the rest of the demo.
@@ -126,7 +126,7 @@ public class Worker : BackgroundService
                         await CosmosService.DemoHotPartition(_cosmosClient, database, container, partitionKey, _logger, stoppingToken);
                     }
                     break;
-                case "Demo: Set Item TTL":
+                case "Set Item TTL":
                     Console.WriteLine("Provide an ID to set TTL: ");
                     id = Console.ReadLine();
                     Console.WriteLine("Provide a Partition Key to set TTL: ");
@@ -140,7 +140,7 @@ public class Worker : BackgroundService
                     } else {ttl = 60;}
                     await CosmosService.SetItemTTL(_cosmosClient, database, container, id, partitionKey, ttl, _logger, stoppingToken);
                     break;
-                case "Demo: Optimistic Concurrency":
+                case "Item Update with Concurrency Check":
                     Console.WriteLine("Provide an ID to update: ");
                     id = Console.ReadLine();
                     Console.WriteLine("Provide a Partition Key to update: ");
@@ -150,7 +150,7 @@ public class Worker : BackgroundService
                     if(string.IsNullOrEmpty(id) || string.IsNullOrEmpty(partitionKey) || string.IsNullOrEmpty(newEmail)){
                         _logger.LogError("ID, Partition Key, or Email is null or empty");
                     } else {
-                        await CosmosService.OptimisticConcurrencyWrite(_cosmosClient, database, container, id, partitionKey, newEmail, _logger, stoppingToken);
+                        await CosmosService.UpdateWithConcurrencyCheck(_cosmosClient, database, container, id, partitionKey, newEmail, _logger, stoppingToken);
                     }
                     break;
                 case "Exit Application\n":
