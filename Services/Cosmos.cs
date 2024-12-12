@@ -42,10 +42,8 @@ public class CosmosService
     }
 
     // Item Operations
-    public static async Task WriteItem(CosmosClient _client, string? database, string? container, ILogger<Worker> _logger, CancellationToken stoppingToken)
+    public static async Task WriteItem(Container _container, ILogger<Worker> _logger, CancellationToken stoppingToken)
     {
-        Database _database = _client.GetDatabase(database);
-        Container _container = _database.GetContainer(container);
 
         CosmosPerson person = BogusService.GeneratePerson();
 
@@ -56,14 +54,14 @@ public class CosmosService
                 {
                     if (ItemResponse.IsCompletedSuccessfully)
                     {
-                        _logger.LogInformation($"Created item {ItemResponse.Result.Resource.Id} in database {_database.Id} container {_container.Id}");
+                        _logger.LogInformation($"Created item {ItemResponse.Result.Resource.Id} in container {_container.Id}");
                         _logger.LogInformation($"Person: {person.FirstName} {person.LastName}");
                         _logger.LogInformation("HTTP status code: " + ItemResponse.Result.StatusCode);
                         _logger.LogInformation("Operation request charge: " + ItemResponse.Result.RequestCharge);
                     }
                     else
                     {
-                        _logger.LogError($"Failed to create item {ItemResponse.Result.Resource.Id} in database {_database.Id} container {_container.Id}");
+                        _logger.LogError($"Failed to create item {ItemResponse.Result.Resource.Id} in container {_container.Id}");
                     }
                 }
                 catch (Exception ex)
@@ -73,10 +71,8 @@ public class CosmosService
             }, stoppingToken);
     }
 
-    public static async Task BulkWrite(CosmosClient _client, string? database, string? container, ILogger<Worker> _logger, CancellationToken stoppingToken)
+    public static async Task BulkWrite(Container _container, ILogger<Worker> _logger, CancellationToken stoppingToken)
     {
-        Database _database = _client.GetDatabase(database);
-        Container _container = _database.GetContainer(container);
 
         IReadOnlyCollection<CosmosPerson> persons = BogusService.BulkGeneratePersons(1000);
         List<Task> tasks = new();
@@ -90,11 +86,11 @@ public class CosmosService
                     {
                         if (ItemResponse.IsCompletedSuccessfully)
                         {
-                            _logger.LogInformation($"Created item {ItemResponse.Result.Resource.Id} in database {_database.Id} container {_container.Id}");
+                            _logger.LogInformation($"Created item {ItemResponse.Result.Resource.Id} in container {_container.Id}");
                         }
                         else
                         {
-                            _logger.LogError($"Failed to create item {ItemResponse.Result.Resource.Id} in database {_database.Id} container {_container.Id}");
+                            _logger.LogError($"Failed to create item {ItemResponse.Result.Resource.Id} in container {_container.Id}");
                         }
                     }
                     catch (Exception ex)
@@ -107,10 +103,8 @@ public class CosmosService
         await Task.WhenAll(tasks);
     }
 
-    public static async Task PatchItem(CosmosClient _client, string? database, string? container, string? id, string? partitionKey, string? newFirstName, ILogger<Worker> _logger, CancellationToken stoppingToken)
+    public static async Task PatchItem(Container _container, string? id, string? partitionKey, string? newFirstName, ILogger<Worker> _logger, CancellationToken stoppingToken)
     {
-        Database _database = _client.GetDatabase(database);
-        Container _container = _database.GetContainer(container);
 
         try
         {
@@ -124,7 +118,7 @@ public class CosmosService
                 cancellationToken: stoppingToken)
                 .ContinueWith(ItemResponse =>
                 {
-                    _logger.LogInformation($"Upserted item {ItemResponse.Result.Resource.Id} in database {_database.Id} container {_container.Id}");
+                    _logger.LogInformation($"Upserted item {ItemResponse.Result.Resource.Id} in container {_container.Id}");
                     _logger.LogInformation("Operation request charge: " + ItemResponse.Result.RequestCharge);
                 }, stoppingToken);
         }
@@ -134,10 +128,8 @@ public class CosmosService
         }
     }
 
-    public static async Task UpdateWithConcurrencyCheck(CosmosClient _client, string? database, string? container, string? id, string? pk, string? newEmail, ILogger<Worker> _logger, CancellationToken stoppingToken)
+    public static async Task UpdateWithConcurrencyCheck(Container _container, string? id, string? pk, string? newEmail, ILogger<Worker> _logger, CancellationToken stoppingToken)
     {
-        Database _database = _client.GetDatabase(database);
-        Container _container = _database.GetContainer(container);
 
         ItemResponse<CosmosPerson> response = await _container.ReadItemAsync<CosmosPerson>(id, new PartitionKey(pk));
         CosmosPerson personToPatch = response.Resource;
@@ -161,10 +153,8 @@ public class CosmosService
         }
     }
 
-    public static async Task SetItemTTL(CosmosClient _client, string? database, string? container, string? id, string? pk, int? ttl, ILogger<Worker> _logger, CancellationToken stoppingToken)
+    public static async Task SetItemTTL(Container _container, string? id, string? pk, int? ttl, ILogger<Worker> _logger, CancellationToken stoppingToken)
     {
-        Database _database = _client.GetDatabase(database);
-        Container _container = _database.GetContainer(container);
 
         ItemResponse<CosmosPersonTtl> person = await _container.ReadItemAsync<CosmosPersonTtl>(id, new PartitionKey(pk));
         CosmosPersonTtl p = person.Resource;
@@ -182,10 +172,8 @@ public class CosmosService
         }
     }
 
-    public static async Task PointReadItem(CosmosClient _client, string? database, string? container, string? id, string? partitionKey, ILogger<Worker> _logger, CancellationToken stoppingToken)
+    public static async Task PointReadItem(Container _container, string? id, string? partitionKey, ILogger<Worker> _logger, CancellationToken stoppingToken)
     {
-        Database _database = _client.GetDatabase(database);
-        Container _container = _database.GetContainer(container);
 
         try
         {
@@ -200,11 +188,8 @@ public class CosmosService
         }
     }
 
-    public static async Task QueryItems(CosmosClient _client, string? database, string? container, QueryDefinition query, ILogger<Worker> _logger, CancellationToken stoppingToken)
+    public static async Task QueryItems(Container _container, QueryDefinition query, ILogger<Worker> _logger, CancellationToken stoppingToken)
     {
-        Database _database = _client.GetDatabase(database);
-        Container _container = _database.GetContainer(container);
-
         try
         {
             FeedIterator<CosmosPerson> resultSet = _container.GetItemQueryIterator<CosmosPerson>(query);
@@ -222,15 +207,12 @@ public class CosmosService
     }
 
     // Utility Methods
-    public static async Task DemoHotPartition(CosmosClient _client, string? database, string? container, string? partitionKeyPath, ILogger<Worker> _logger, CancellationToken stoppingToken)
+    public static async Task DemoHotPartition(Container _container, string? partitionKeyPath, ILogger<Worker> _logger, CancellationToken stoppingToken)
     {
         // For this example, we will recreate a hot partition scenario
         // The container should have at least 30k RUs
         // We will seed the container with an initial 1k items
         // Then write additional items with a skewed partition key value
-
-        Database _database = _client.GetDatabase(database);
-        Container _container = _database.GetContainer(container);
 
         IReadOnlyCollection<CosmosPerson> personsHot = BogusService.BulkGeneratePersons(10000);
         List<Task> tasks = new();
@@ -247,11 +229,11 @@ public class CosmosService
                     {
                         if (ItemResponse.IsCompletedSuccessfully)
                         {
-                            _logger.LogInformation($"Created item {ItemResponse.Result.Resource.Id} in database {_database.Id} container {_container.Id}");
+                            _logger.LogInformation($"Created item {ItemResponse.Result.Resource.Id} in container {_container.Id}");
                         }
                         else
                         {
-                            _logger.LogError($"Failed to create item {ItemResponse.Result.Resource.Id} in database {_database.Id} container {_container.Id}");
+                            _logger.LogError($"Failed to create item {ItemResponse.Result.Resource.Id} in container {_container.Id}");
                         }
                     }
                     catch (Exception ex)
