@@ -41,6 +41,47 @@ public class CosmosService
         }
     }
 
+    public static CosmosClient CosmosClientOptions(string CosmosEndpoint, string? entraTenantId)
+    {
+        DefaultAzureCredentialOptions credOptions = new()
+        {
+            ExcludeVisualStudioCodeCredential = true,
+            ExcludeVisualStudioCredential = true,
+            ExcludeEnvironmentCredential = true,
+        };
+
+        DefaultAzureCredential cred = new(credOptions);
+
+        CosmosClientOptions clientOptions = new()
+        {
+            SerializerOptions = new CosmosSerializationOptions
+            {
+                PropertyNamingPolicy = CosmosPropertyNamingPolicy.CamelCase
+            },
+            AllowBulkExecution = true,
+            ConnectionMode = ConnectionMode.Gateway, // Use Gateway mode for regional clients
+            ApplicationName = "UltimateCosmosDemo",
+            ApplicationRegion = "West US 2", // Specify the region for the application
+            ApplicationPreferredRegions = new List<string> { "West US 2", "East US" }, // Specify preferred regions for the application
+            ConsistencyLevel = ConsistencyLevel.Eventual, // Set the consistency level
+            EnableContentResponseOnWrite = false,
+            MaxRetryAttemptsOnRateLimitedRequests = 5, // Set the maximum retry attempts on rate-limited requests
+            PriorityLevel = PriorityLevel.Low, // Set the request priority level, High is default
+            
+        };
+
+        try
+        {
+            CosmosClient cosmosClient = new(CosmosEndpoint, cred, clientOptions);
+            return cosmosClient;
+        }
+        catch
+        {
+            throw new Exception("An error occurred while creating the CosmosClient.");
+        }
+    }
+
+
     // Item Operations
     public static async Task WriteItem(Container _container, ILogger<Worker> _logger, CancellationToken stoppingToken)
     {
@@ -69,6 +110,41 @@ public class CosmosService
                     _logger.LogError($"Exception occurred: {ex.Message}");
                 }
             }, stoppingToken);
+    }
+
+    public static async Task WriteItemExcludeRegion(Container _container, ILogger<Worker> _logger, CancellationToken stoppingToken)
+    {
+
+        CosmosPerson person = BogusService.GeneratePerson();
+
+        // Exclude the region from the request
+        ItemRequestOptions options = new()
+        {
+            ExcludeRegions = new List<string> { "West US 2"}
+        }; // This will exclude the region from the request
+
+        // await _container.CreateItemAsync<CosmosPerson>(person, options: options, cancellationToken: stoppingToken)
+        //     .ContinueWith(ItemResponse =>
+        //     {
+        //         try
+        //         {
+        //             if (ItemResponse.IsCompletedSuccessfully)
+        //             {
+        //                 _logger.LogInformation($"Created item {ItemResponse.Result.Resource.Id} in container {_container.Id}");
+        //                 _logger.LogInformation($"Person: {person.FirstName} {person.LastName}");
+        //                 _logger.LogInformation("HTTP status code: " + ItemResponse.Result.StatusCode);
+        //                 _logger.LogInformation("Operation request charge: " + ItemResponse.Result.RequestCharge);
+        //             }
+        //             else
+        //             {
+        //                 _logger.LogError($"Failed to create item {ItemResponse.Result.Resource.Id} in container {_container.Id}");
+        //             }
+        //         }
+        //         catch (Exception ex)
+        //         {
+        //             _logger.LogError($"Exception occurred: {ex.Message}");
+        //         }
+        //     }, stoppingToken);
     }
 
     public static async Task BulkWrite(Container _container, ILogger<Worker> _logger, CancellationToken stoppingToken)
@@ -206,6 +282,7 @@ public class CosmosService
         }
     }
 
+
     // Utility Methods
     public static async Task DemoHotPartition(Container _container, string? partitionKeyPath, ILogger<Worker> _logger, CancellationToken stoppingToken)
     {
@@ -245,4 +322,7 @@ public class CosmosService
 
         await Task.WhenAll(tasks);
     }
+
+
+
 }
