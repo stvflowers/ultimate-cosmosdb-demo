@@ -88,6 +88,13 @@ public class CosmosService
 
         CosmosPerson person = BogusService.GeneratePerson();
 
+        // // Exclude the region from the request
+        // ItemRequestOptions options = new()
+        // {
+        //     ExcludeRegions = new List<string> { "West US 2"}
+        // }; // This will exclude the region from the request
+
+
         await _container.CreateItemAsync<CosmosPerson>(person, cancellationToken: stoppingToken)
             .ContinueWith(ItemResponse =>
             {
@@ -110,41 +117,6 @@ public class CosmosService
                     _logger.LogError($"Exception occurred: {ex.Message}");
                 }
             }, stoppingToken);
-    }
-
-    public static async Task WriteItemExcludeRegion(Container _container, ILogger<Worker> _logger, CancellationToken stoppingToken)
-    {
-
-        CosmosPerson person = BogusService.GeneratePerson();
-
-        // Exclude the region from the request
-        ItemRequestOptions options = new()
-        {
-            ExcludeRegions = new List<string> { "West US 2"}
-        }; // This will exclude the region from the request
-
-        // await _container.CreateItemAsync<CosmosPerson>(person, options: options, cancellationToken: stoppingToken)
-        //     .ContinueWith(ItemResponse =>
-        //     {
-        //         try
-        //         {
-        //             if (ItemResponse.IsCompletedSuccessfully)
-        //             {
-        //                 _logger.LogInformation($"Created item {ItemResponse.Result.Resource.Id} in container {_container.Id}");
-        //                 _logger.LogInformation($"Person: {person.FirstName} {person.LastName}");
-        //                 _logger.LogInformation("HTTP status code: " + ItemResponse.Result.StatusCode);
-        //                 _logger.LogInformation("Operation request charge: " + ItemResponse.Result.RequestCharge);
-        //             }
-        //             else
-        //             {
-        //                 _logger.LogError($"Failed to create item {ItemResponse.Result.Resource.Id} in container {_container.Id}");
-        //             }
-        //         }
-        //         catch (Exception ex)
-        //         {
-        //             _logger.LogError($"Exception occurred: {ex.Message}");
-        //         }
-        //     }, stoppingToken);
     }
 
     public static async Task BulkWrite(Container _container, ILogger<Worker> _logger, CancellationToken stoppingToken)
